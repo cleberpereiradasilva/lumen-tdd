@@ -6,6 +6,23 @@ use Laravel\Lumen\Testing\DatabaseTransactions;
 class UserTest extends TestCase
 {
     use DatabaseTransactions;
+
+    public $dados = [];
+    public $api_token = [];
+    public function __construct($name = null, array $data = [], $dataName = '')
+    {
+        parent::__construct($name, $data, $dataName);
+        $this->dados = [
+            'name' => 'Nome 01'.date('Ymdis').' '.rand(1,100),
+            'email' => 'email'.date('Ymdis').'_'.rand(1,100).'3@exemplo.com',
+            'password' => '123',
+            'password_confirmation' => '123'
+        ];
+
+        $this->api_token = ['api_token' => \App\User::where('api_token','<>','')->first()->api_token];
+
+    }
+
     /**
      * A basic test example.
      *
@@ -14,15 +31,9 @@ class UserTest extends TestCase
 
     public function testCreateUser()
     {
-        $dados = [
-          'name' => 'Nome 01'.date('Ymdis').' '.rand(1,100),
-          'email' => 'email3@exemplo.com',
-          'password' => '123',
-          'password_confirmation' => '123'
-        ];
 
-        $this->post('/api/user',$dados);
 
+        $this->post('/api/user',$this->dados,$this->api_token);
         $this->assertResponseOk();
 
         $resposta = (array) json_decode($this->response->content());
@@ -32,18 +43,16 @@ class UserTest extends TestCase
         $this->assertArrayHasKey('id',$resposta);
 
         $this->seeInDatabase('users',[
-            'name' => $dados['name'],
-            'email' => $dados['email']
+            'name' => $this->dados['name'],
+            'email' => $this->dados['email']
         ]);
-
-
 
     }
 
     public function testViewUser()
     {
         $user = \App\User::first();
-        $this->get('/api/user/'.$user->id);
+        $this->get('/api/user/'.$user->id,$this->api_token);
         $this->assertResponseOk();
         $resposta = (array) json_decode($this->response->content());
         $this->assertArrayHasKey('name',$resposta);
@@ -53,10 +62,30 @@ class UserTest extends TestCase
 
 
 
+
+
+    public function testeLogin(){
+
+        $this->post('/api/user',$this->dados,$this->api_token);
+        $this->assertResponseOk();
+
+        $this->post('/api/login',$this->dados);
+        $this->assertResponseOk();
+        $resposta = (array) json_decode($this->response->content());
+        $this->assertArrayHasKey('api_token',$resposta);
+
+
+
+
+    }
+
+
+
+
     public function testAllUser()
     {
 
-        $this->get('/api/users');
+        $this->get('/api/users',$this->api_token);
         $this->assertResponseOk();
         $this->seeJsonStructure([
             '*' => [
@@ -71,7 +100,7 @@ class UserTest extends TestCase
     public function testDeleteUser()
     {
         $user = \App\User::first();
-        $this->delete('/api/user/'.$user->id);
+        $this->delete('/api/user/'.$user->id,$this->api_token);
         $this->assertResponseOk();
         $this->assertEquals("Removido com sucesso!",$this->response->content());
     }
@@ -85,7 +114,7 @@ class UserTest extends TestCase
             'email' => 'email4_'.date('Ymdis').'_'.rand(1,100).'@exemplo.com',
         ];
 
-        $this->put('/api/user/'.$user->id,$dados);
+        $this->put('/api/user/'.$user->id,$dados,$this->api_token);
         $this->assertResponseOk();
         $resposta = (array) json_decode($this->response->content());
         $this->assertArrayHasKey('name',$resposta);
@@ -111,7 +140,7 @@ class UserTest extends TestCase
             'password_confirmation' => '123'
         ];
 
-        $this->put('/api/user/'.$user->id,$dados);
+        $this->put('/api/user/'.$user->id,$dados,$this->api_token);
         $this->assertResponseOk();
         $resposta = (array) json_decode($this->response->content());
         $this->assertArrayHasKey('name',$resposta);
